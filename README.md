@@ -29,7 +29,7 @@ TBD
 
 [Yoonsik Jung](https://github.com/developkelvin)
 
-Yeongsoup Kim
+Yeongseop Kim
 
 Seungwoo Jung
 
