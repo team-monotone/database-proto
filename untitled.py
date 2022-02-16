@@ -21,10 +21,10 @@ unidentified class which will be discussed in future
 from typing import TypeVar
 from typing import IO
 
-# variables for strong-arguments.
+# variables for strong-type.
 
-from strong_arguments import Itself
-from strong_arguments import is_satisfied_strongly
+from strong_type import Itself
+from strong_type import is_satisfied_strongly
 
 strong_node_init = (
     (1, 'key', [int]), 
