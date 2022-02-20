@@ -90,7 +90,7 @@ class Node(object):
         return f'{self.__class__.__name__}<{self.key},{self.value}>'
 
     @property
-    def key(self) -> str: #why str?
+    def key(self) -> int: #why str?
         return self._key
 
     @property
@@ -123,7 +123,7 @@ class BinaryTree(object):
         self._key = key
 
     @property
-    def key(self) -> str:
+    def key(self) -> int:
         return self._key
 
     @property
@@ -134,23 +134,28 @@ class BinaryTree(object):
         
         yield None
 
-    def _insert_as_value(self, root:NodeType,  value:object) -> bool:
+    def _insert_as_value(self, root:NodeType, key:int,  value:object) -> NodeType:
         # do not describe anything directly.
         # your code goes here, not a public method.
 
         # generate node -> insert
-        node = Node(0,value) #how to init key?
+        node = Node(key,value) 
+
         if root is None:
             #inserting first node
             root = node
         else:
-            if root._key > node._key:
+            if root._key == node._key:
+            #raise Exception
+                pass
+            elif root._key > node._key:
                 root._node_on_left = self. _insert_as_node(root._node_on_left, node)
             else:
                 root._node_on_right = self. _insert_as_node(root._node_on_right, node)
+
         return root
     
-    def _insert_as_node(self, root:NodeType, node:NodeType) -> bool:
+    def _insert_as_node(self, root:NodeType, node:NodeType) -> NodeType:
         # do not describe anything directly.
         # your code goes here, not a public method.
 
@@ -158,10 +163,14 @@ class BinaryTree(object):
             #inserting first node
             root = node
         else:
-            if root._key > node._key:
+            if root._key == node._key:
+                #raise Exception
+                pass
+            elif root._key > node._key:
                 root._node_on_left = self. _insert_as_node(root._node_on_left, node)
             else:
                 root._node_on_right = self. _insert_as_node(root._node_on_right, node)
+
         return root
 
 
@@ -182,17 +191,19 @@ class BinaryTree(object):
         else:
             return self._find(root._node_on_right, key)
 
-    def insert(self, value:object, node:NodeType) -> bool:
+    def insert(self, data, key:int=0) -> bool:
         # your code goes here in a public method.
 
-        if value is not None and node is not None:
-            raise ArgumentException('value and node not to be given at the same time.')
-        elif value is not None:
-            self._root = self._insert_as_value(self._root,value)
-            return self._root
+        # if value is not None and node is not None:
+        #     raise ArgumentException('value and node not to be given at the same time.')
+
+        #How to make difference between node and value clearly?
+        if isinstance(data, Node):
+            self._root = self._insert_as_node(self._root,data)
+            return True
         else:
-            self._root = self._insert_as_node(self._root,node)
-            return self._root
+            self._root = self._insert_as_value(self._root,key,data)
+            return True
 
     def remove(self, key:int) -> bool:
         # your code goes here in a public method.
@@ -236,10 +247,11 @@ if __name__ == "__main__":
     tree = BinaryTree(1)
 
     for node in nodes:
-        tree.insert(None,node)
+        print(tree.insert(node))
     
+    print(nodes[0])
     print(nodes[1])
     print(tree.find(1))
     print(tree.find(2))
     print(tree.find(3))
-
+    
