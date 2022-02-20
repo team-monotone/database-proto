@@ -90,7 +90,7 @@ class Node(object):
         return f'{self.__class__.__name__}<{self.key},{self.value}>'
 
     @property
-    def key(self) -> str:
+    def key(self) -> int: #why str?
         return self._key
 
     @property
@@ -123,26 +123,56 @@ class BinaryTree(object):
         self._key = key
 
     @property
-    def key(self) -> str:
+    def key(self) -> int:
         return self._key
 
     @property
     def nodes(self) -> NodeType:
         # yield or enumerate nodes that are contained itself.
+
+        # [[1,key],[2,key,key],[4,key,key,key,key],...]
         
         yield None
 
-    def _insert_as_value(self, value:object) -> bool:
+    def _insert_as_value(self, root:NodeType, key:int,  value:object) -> NodeType:
         # do not describe anything directly.
         # your code goes here, not a public method.
 
-        pass
+        # generate node -> insert
+        node = Node(key,value) 
+
+        if root is None:
+            #inserting first node
+            root = node
+        else:
+            if root._key == node._key:
+            #raise Exception
+                pass
+            elif root._key > node._key:
+                root._node_on_left = self. _insert_as_node(root._node_on_left, node)
+            else:
+                root._node_on_right = self. _insert_as_node(root._node_on_right, node)
+
+        return root
     
-    def _insert_as_node(self, node:NodeType) -> bool:
+    def _insert_as_node(self, root:NodeType, node:NodeType) -> NodeType:
         # do not describe anything directly.
         # your code goes here, not a public method.
 
-        pass
+        if root is None:
+            #inserting first node
+            root = node
+        else:
+            if root._key == node._key:
+                #raise Exception
+                pass
+            elif root._key > node._key:
+                root._node_on_left = self. _insert_as_node(root._node_on_left, node)
+            else:
+                root._node_on_right = self. _insert_as_node(root._node_on_right, node)
+
+        return root
+
 
     def _remove(self, key:int) -> bool:
         # do not describe anything directly.
@@ -150,19 +180,30 @@ class BinaryTree(object):
         
         pass
 
-    def _find(self, key:int) -> NodeType:
+    def _find(self, root:NodeType, key:int) -> NodeType:
         # do not describe anything directly.
         # your code goes here, not a public method.
         
-        pass
+        if root is None or root._key == key:
+            return root is not None
+        elif key < root._key:
+            return self._find(root._node_on_left, key)
+        else:
+            return self._find(root._node_on_right, key)
 
-    def insert(self, value:object, node:NodeType) -> bool:
+    def insert(self, data, key:int=0) -> bool:
         # your code goes here in a public method.
 
-        if value is not None and node is not None:
-            raise ArgumentException('value and node not to be given at the same time.')
+        # if value is not None and node is not None:
+        #     raise ArgumentException('value and node not to be given at the same time.')
 
-        pass
+        #How to make difference between node and value clearly?
+        if isinstance(data, Node):
+            self._root = self._insert_as_node(self._root,data)
+            return True
+        else:
+            self._root = self._insert_as_value(self._root,key,data)
+            return True
 
     def remove(self, key:int) -> bool:
         # your code goes here in a public method.
@@ -172,7 +213,7 @@ class BinaryTree(object):
     def find(self, key:int) -> NodeType:
         # your code goes here in a public method.
         
-        pass
+        return self._find(self._root,key)
 
     @staticmethod
     def dumps(cls, object_:BinaryTreeType) -> str:
@@ -199,3 +240,18 @@ class BinaryTree(object):
         # and also described with static method "loads"
 
         pass
+
+
+if __name__ == "__main__":
+    nodes = [Node(1),Node(2)]
+    tree = BinaryTree(1)
+
+    for node in nodes:
+        print(tree.insert(node))
+    
+    print(nodes[0])
+    print(nodes[1])
+    print(tree.find(1))
+    print(tree.find(2))
+    print(tree.find(3))
+    
