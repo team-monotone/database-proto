@@ -174,18 +174,42 @@ class BinaryTree(object):
         return root
 
 
-    def _remove(self, key:int) -> bool:
+    def _remove(self, node:NodeType, key:int) -> tuple: #return Nodetype, bool
         # do not describe anything directly.
         # your code goes here, not a public method.
-        
-        pass
+        if node is None:
+            return node, False
+
+        result = False
+        if key == node._key:
+            result = True
+            if node._node_on_left and node._node_on_right:
+                top, bottom = node, node._node_on_right
+                while bottom._node_on_left is not None:
+                    top, bottom = bottom, bottom._node_on_left
+                bottom._node_on_left = node._node_on_left
+                if top != node:
+                    top._node_on_left = bottom._node_on_right
+                    bottom._node_on_right = node._node_on_right
+                node = bottom
+            elif node._node_on_left or node._node_on_right:
+                node = node._node_on_left or node._node_on_right
+            else:
+                node = None
+
+        elif key < node._key:
+            node._node_on_left, result = self._remove(node._node_on_left, key)
+        else:
+            node._node_on_right, result = self._remove(node._node_on_right, key)
+        return node, result
+
 
     def _find(self, root:NodeType, key:int) -> NodeType:
         # do not describe anything directly.
         # your code goes here, not a public method.
         
         if root is None or root._key == key:
-            return root is not None
+            return root
         elif key < root._key:
             return self._find(root._node_on_left, key)
         else:
@@ -207,8 +231,9 @@ class BinaryTree(object):
 
     def remove(self, key:int) -> bool:
         # your code goes here in a public method.
+        self._root, result = self._remove(self._root,key)
 
-        pass
+        return result
 
     def find(self, key:int) -> NodeType:
         # your code goes here in a public method.
@@ -243,15 +268,31 @@ class BinaryTree(object):
 
 
 if __name__ == "__main__":
-    nodes = [Node(1),Node(2)]
+    nodes = [Node(1),Node(2),Node(3),Node(4),Node(5),Node(6),Node(7),Node(8)]
     tree = BinaryTree(1)
 
+    print("insert ======")
     for node in nodes:
         print(tree.insert(node))
+        print(tree._root)
     
-    print(nodes[0])
-    print(nodes[1])
+    print("find ======")
     print(tree.find(1))
+    print(tree._root)
     print(tree.find(2))
+    print(tree._root)
     print(tree.find(3))
+    print(tree._root)
+
+    print("remove ======")
+    print(tree.remove(1))
+    print(tree._root)
+    print(tree.find(1))
+    print(tree._root)
+    print(tree.remove(1))
+    print(tree._root)
+    print(tree.remove(4))
+    print(tree._root)
+    print(tree.remove(3))
+    print(tree._root)
     
