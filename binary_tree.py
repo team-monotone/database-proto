@@ -17,6 +17,7 @@ unidentified class which will be discussed in future
     > binary tree instances goes on ...
 
 '''
+import json
 
 from typing import TypeVar
 from typing import IO
@@ -114,6 +115,9 @@ class BinaryTree(object):
     # root node instance
     _root = None
 
+    # nodes instance
+    _nodes = {}
+
     @is_satisfied_strongly(strong_btree_init)
     def __init__(self, key:int):
         # key should be given by 
@@ -121,22 +125,22 @@ class BinaryTree(object):
         # not by itself.
 
         self._key = key
+        self._nodes.update({'key':key})
 
     @property
     def key(self) -> int:
         return self._key
 
     @property
-    def nodes(self) -> NodeType:
-        # yield or enumerate nodes that are contained itself.
-
-        # [[1,key],[2,key,key],[4,key,key,key,key],...]
-        
-        yield None
+    def nodes(self) -> dict:
+        return self._nodes
 
     def _insert_as_value(self, root:NodeType, key:int,  value:object) -> NodeType:
         # do not describe anything directly.
         # your code goes here, not a public method.
+
+        #insert key,value to _nodes
+        self._nodes.update({key:value})
 
         # generate node -> insert
         node = Node(key,value) 
@@ -159,6 +163,9 @@ class BinaryTree(object):
         # do not describe anything directly.
         # your code goes here, not a public method.
 
+        #insert key,value to _nodes
+        self._nodes.update({node.key:node.value})
+
         if root is None:
             #inserting first node
             root = node
@@ -177,6 +184,11 @@ class BinaryTree(object):
     def _remove(self, node:NodeType, key:int) -> tuple: #return Nodetype, bool
         # do not describe anything directly.
         # your code goes here, not a public method.
+        
+        #insert key,value to _nodes
+        if key in self._nodes:
+            del self._nodes[key]
+
         if node is None:
             return node, False
 
@@ -244,55 +256,87 @@ class BinaryTree(object):
     def dumps(cls, object_:BinaryTreeType) -> str:
         # this method should be treated as static method.
 
-        pass
+        return json.dumps(object_.nodes)
 
     @staticmethod
     def loads(cls, str_:str) -> BinaryTreeType:
         # this method should be treated as static method.
 
-        pass
+        nodes = json.loads(str_)
+
+        tree = BinaryTree(nodes['key'])
+
+        del nodes['key']
+
+        for nodetuple in nodes.items():
+            node = Node(int(nodetuple[0]))
+            node._value = nodetuple[1]
+            tree.insert(node)
+        
+        return tree
 
     @staticmethod
-    def dump(cls, object_:BinaryTreeType, fp:IO[str]) -> str:
+    def dump(cls, object_:BinaryTreeType) -> str:
         # this method should be treated as static method
         # and also described with static method "dumps"
+        
+        treestr = 'data/BinaryTree_{0}.json'.format(object_._key)
 
-        pass
+        with open(treestr, "w") as fp:
+
+            fp.write(object_.dumps(cls,object_))
 
     @staticmethod
     def load(cls, fp:IO[str]) -> BinaryTreeType:
         # this method should be treated as static method
         # and also described with static method "loads"
 
-        pass
-
+        return BinaryTree.loads(BinaryTree,fp.read())
 
 if __name__ == "__main__":
     nodes = [Node(1),Node(2),Node(3),Node(4),Node(5),Node(6),Node(7),Node(8)]
+    nodes[0]._value = "1st"
     tree = BinaryTree(1)
 
     print("insert ======")
     for node in nodes:
         print(tree.insert(node))
         print(tree._root)
+        print(tree.nodes)
     
     print("find ======")
     print(tree.find(1))
-    print(tree._root)
+    print(tree.nodes)
     print(tree.find(2))
-    print(tree._root)
+    print(tree.nodes)
     print(tree.find(3))
-    print(tree._root)
+    print(tree.nodes)
 
     print("remove ======")
     print(tree.remove(1))
-    print(tree._root)
+    print(tree.nodes)
     print(tree.find(1))
-    print(tree._root)
+    print(tree.nodes)
     print(tree.remove(1))
-    print(tree._root)
+    print(tree.nodes)
     print(tree.remove(4))
-    print(tree._root)
+    print(tree.nodes)
     print(tree.remove(3))
-    print(tree._root)
+    print(tree.nodes)
     
+    dumpstest = BinaryTree.dumps(BinaryTree,tree)
+    print(dumpstest)
+    BinaryTree.dump(BinaryTree,tree)
+
+    tree2 = BinaryTree.loads(BinaryTree,dumpstest)
+
+    print(tree2.nodes)
+
+    fp = open("data/BinaryTree_1.json",'r')
+
+    tree3 = BinaryTree.load(BinaryTree,fp)
+
+    fp.close()
+
+    print(tree3.nodes)
+
