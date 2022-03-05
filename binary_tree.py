@@ -1,10 +1,15 @@
 
 '''
-21.3.5  add : KeyGenerator
-        mod : insert, insert_as_value
+21.3.5  add : KeyGenerator(temp)
+        mod : insert, insert_as_value, insert_as_node, nodes, dumps, dump, Node(__str__,__repr__)
 
-        update need:key라는 워딩을 id등 바꿔주자
-                    dump 할때 fp로 인자 받기
+        update need:
+                    loads 함수에서 insert로 tree 만드는것을 node를 만들어서 tree로 만드는걸로 바꾸기
+
+                    insert_as_.. -> node 반환 이유 : 들어간 친구 다시 반환 , 잘 들어갔나 확인차
+                                 -> recursive 함수를 밖으로 빼서 정의함으로써 아규먼트를 직관적으로 변경, 타입체크 등 확장성 증대
+                    argument type hint 잘 적기
+
                     
 '''
 
@@ -73,7 +78,7 @@ class Node(object):
 
     # right node instance on this instance (reference)
     _node_on_right = None
-    
+
     @is_satisfied_strongly(strong_node_init)
     def __init__(
             self, 
@@ -94,13 +99,34 @@ class Node(object):
         self._node_on_right = node_on_right
 
     def __str__(self):
-        return f'{self.__class__.__name__}<{self.key},{self.value}>'
-    
+        cls_ = self.__class__.__name__
+        key = self._key
+        val = self._value
+
+        left = None if self._node_on_left is None \
+            else self._node_on_left._key 
+
+        right = None if self._node_on_right is None \
+            else self._node_on_right._key
+
+        return f'{cls_}<{key}:{val}, l:{left}, r:{right}>'
+
+
     def __repr__(self):
-        return f'{self.__class__.__name__}<{self.key},{self.value}>'
+        cls_ = self.__class__.__name__
+        key = self._key
+        val = self._value
+
+        left = None if self._node_on_left is None \
+            else self._node_on_left._key 
+        
+        right = None if self._node_on_right is None \
+            else self._node_on_right._key
+
+        return f'{cls_}<{key}:{val}, l:{left}, r:{right}>'
 
     @property
-    def key(self) -> int: #why str?
+    def key(self) -> int:
         return self._key
 
     @property
@@ -113,7 +139,7 @@ class Node(object):
 
     @property
     def node_on_right(self) -> NodeType:
-        return self._node_on_left
+        return self._node_on_right
 
 class KeyGenerator(int):
     # BinaryTree key generator
@@ -148,9 +174,6 @@ class BinaryTree(object):
     # root node instance
     _root = None
 
-    # nodes instance
-    _nodes = {}
-
     # KeyGenerator instance
     _keygenerator = None
 
@@ -161,7 +184,6 @@ class BinaryTree(object):
         # not by itself.
 
         self._key = key
-        self._nodes.update({'key':key})
         self._keygenerator = KeyGenerator(key)
 
     @property
@@ -169,64 +191,61 @@ class BinaryTree(object):
         return self._key
 
     @property
-    def nodes(self) -> dict:
-        return self._nodes
+    def nodes(self) -> NodeType:
+        def treesearch(node:Node):
+            if(node is not None):
+                yield from treesearch(node.node_on_left)
+                yield node
+                yield from treesearch(node.node_on_right)
+        
+        return treesearch(self._root)
 
-    def _insert_as_value(self, root:NodeType, key:int,  value:object) -> NodeType:
+    def _insert_as_value(self, parent:Node, key:int, value:object) -> Node:
         # do not describe anything directly.
         # your code goes here, not a public method.
-
-        #insert key,value to _nodes
-        self._nodes.update({key:value})
 
         # generate node -> insert
         node = Node(key)
-        node._value = value 
+        node._value = value
 
-        if root is None:
+        if parent is None:
             #inserting first node
-            root = node
-        else:
-            if root._key == node._key:
-            #raise Exception
-                pass
-            elif root._key > node._key:
-                root._node_on_left = self. _insert_as_node(root._node_on_left, node)
-            else:
-                root._node_on_right = self. _insert_as_node(root._node_on_right, node)
+            parent = node
 
-        return root
+        else:
+            if parent._key == node._key:
+                pass
+
+            elif parent._key > node._key:
+                parent._node_on_left = self._insert_as_value(parent._node_on_left, key, value)
+                
+            else:
+                parent._node_on_right = self._insert_as_value(parent._node_on_right, key, value)
+
+        return parent
     
-    def _insert_as_node(self, root:NodeType, node:NodeType) -> NodeType:
+    def _insert_as_node(self, parent:Node, node:NodeType) -> Node:
         # do not describe anything directly.
         # your code goes here, not a public method.
 
-        #insert key,value to _nodes
-        self._nodes.update({node.key:node.value})
-
-        if root is None:
+        if parent is None:
             #inserting first node
-            root = node
+            parent = node
         else:
-            if root._key == node._key:
+            if parent._key == node._key:
                 #raise Exception
                 pass
-            elif root._key > node._key:
-                root._node_on_left = self. _insert_as_node(root._node_on_left, node)
+            elif parent._key > node._key:
+                parent._node_on_left = self. _insert_as_node(parent._node_on_left, node)
             else:
-                root._node_on_right = self. _insert_as_node(root._node_on_right, node)
+                parent._node_on_right = self. _insert_as_node(parent._node_on_right, node)
 
-        return root
-
+        return parent
 
     def _remove(self, node:NodeType, key:int) -> tuple: #return Nodetype, bool
         # do not describe anything directly.
         # your code goes here, not a public method.
         
-        #insert key,value to _nodes
-        if key in self._nodes:
-            del self._nodes[key]
-
         if node is None:
             return node, False
 
@@ -253,17 +272,16 @@ class BinaryTree(object):
             node._node_on_right, result = self._remove(node._node_on_right, key)
         return node, result
 
-
-    def _find(self, root:NodeType, key:int) -> NodeType:
+    def _find(self, parent:NodeType, key:int) -> Node:
         # do not describe anything directly.
         # your code goes here, not a public method.
         
-        if root is None or root._key == key:
-            return root
-        elif key < root._key:
-            return self._find(root._node_on_left, key)
+        if parent is None or parent._key == key:
+            return parent
+        elif key < parent._key:
+            return self._find(parent._node_on_left, key)
         else:
-            return self._find(root._node_on_right, key)
+            return self._find(parent._node_on_right, key)
 
     def insert(self, data) -> bool:
         # your code goes here in a public method.
@@ -275,9 +293,10 @@ class BinaryTree(object):
         if isinstance(data, Node):
             self._root = self._insert_as_node(self._root,data)
             return True
+
         else:
             key = self._keygenerator.autokey()
-            self._root = self._insert_as_value(self._root,key,data)
+            self._root = self._insert_as_value(self._root, key, value)
             return True
 
     def remove(self, key:int) -> bool:
@@ -286,7 +305,7 @@ class BinaryTree(object):
 
         return result
 
-    def find(self, key:int) -> NodeType:
+    def find(self, key:int) -> Node:
         # your code goes here in a public method.
         
         return self._find(self._root,key)
@@ -294,8 +313,13 @@ class BinaryTree(object):
     @staticmethod
     def dumps(cls, object_:BinaryTreeType) -> str:
         # this method should be treated as static method.
+        nodesdic = {}
+        nodesdic.update({'key':object_.key})
 
-        return json.dumps(object_.nodes)
+        for node in object_.nodes:
+            nodesdic.update({node.key:node.value})
+
+        return json.dumps(nodesdic)
 
     @staticmethod
     def loads(cls, str_:str) -> BinaryTreeType:
@@ -315,15 +339,11 @@ class BinaryTree(object):
         return tree
 
     @staticmethod
-    def dump(cls, object_:BinaryTreeType) -> str:
+    def dump(cls, object_:BinaryTreeType, fp) -> str:
         # this method should be treated as static method
         # and also described with static method "dumps"
         
-        treestr = 'data/BinaryTree_{0}.json'.format(object_._key)
-
-        with open(treestr, "w") as fp:
-
-            fp.write(object_.dumps(cls,object_))
+        fp.write(object_.dumps(cls,object_))
 
     @staticmethod
     def load(cls, fp:IO[str]) -> BinaryTreeType:
@@ -335,54 +355,32 @@ class BinaryTree(object):
 if __name__ == "__main__":
     # nodes = [Node(1),Node(2),Node(3),Node(4),Node(5),Node(6),Node(7),Node(8)]
     # nodes[0]._value = "1st"
-    #nodes = ['this','is','value','insert','test']
-    #tree = BinaryTree(1)
+    values = ['this','is','value','insert','test']
+    tree = BinaryTree(1)
 
-    node111 = Node(1,'1')
-    print(node111)
-    '''
-    print("insert ======")
-    for node in nodes:
-        print(tree.insert(node))
-        print(tree._root)
-        print(tree.nodes)
+    for value in values:
+        tree.insert(value)
     
-    print("find ======")
-    print(tree.find(1))
-    print(tree.nodes)
-    print(tree.find(2))
-    print(tree.nodes)
-    print(tree.find(3))
-    print(tree.nodes)
-
-    print("remove ======")
-    print(tree.remove(1))
-    print(tree.nodes)
-    print(tree.find(1))
-    print(tree.nodes)
-    print(tree.remove(1))
-    print(tree.nodes)
-    print(tree.remove(4))
-    print(tree.nodes)
-    print(tree.remove(3))
-    print(tree.nodes)
-    # 
-    json.dump()
+    treestr = BinaryTree.dumps(BinaryTree,tree)
     
-    dumpstest = BinaryTree.dumps(BinaryTree,tree)
-    print(dumpstest)
-    BinaryTree.dump(BinaryTree,tree)
+    treeadd = 'data/BinaryTree_{0}.json'.format(tree._key)
 
-    tree2 = BinaryTree.loads(BinaryTree,dumpstest)
+    with open(treeadd, "w") as fp:
 
-    print(tree2.nodes)
+        BinaryTree.dump(BinaryTree,tree,fp)
 
-    fp = open("data/BinaryTree_1.json",'r')
+    with open(treeadd, "r") as fp:
+        tree2 = BinaryTree.load(BinaryTree,fp)
 
-    tree3 = BinaryTree.load(BinaryTree,fp)
+    for i in tree2.nodes:
+        print(i)
 
-    fp.close()
+    tree3 = BinaryTree.loads(BinaryTree,treestr)
 
-    print(tree3.nodes)
+    for i in tree3.nodes:
+        print(i)
 
-    '''
+
+    
+        
+
