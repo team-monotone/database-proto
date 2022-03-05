@@ -1,5 +1,19 @@
 
 '''
+21.3.5  add : KeyGenerator(temp)
+        mod : insert, insert_as_value, insert_as_node, nodes, dumps, dump, Node(__str__,__repr__)
+
+        update need:
+                    loads 함수에서 insert로 tree 만드는것을 node를 만들어서 tree로 만드는걸로 바꾸기
+
+                    insert_as_.. -> node 반환 이유 : 들어간 친구 다시 반환 , 잘 들어갔나 확인차
+                                 -> recursive 함수를 밖으로 빼서 정의함으로써 아규먼트를 직관적으로 변경, 타입체크 등 확장성 증대
+                    argument type hint 잘 적기
+
+                    
+'''
+
+'''
 [module structure hierarchy]
 
 unidentified class which will be discussed in future
@@ -17,19 +31,20 @@ unidentified class which will be discussed in future
     > binary tree instances goes on ...
 
 '''
+import json
 
 from typing import TypeVar
 from typing import IO
 
 # variables for strong-type.
 
-from strong_type import Itself
+from strong_type import SelfObject
 from strong_type import is_satisfied_strongly
 
 strong_node_init = (
     (1, 'key', [int]), 
-    (3, 'node_on_left', [None, Itself]), 
-    (4, 'node_on_right', [None, Itself]),
+    (3, 'node_on_left', [None, SelfObject]), 
+    (4, 'node_on_right', [None, SelfObject]),
     )
 
 strong_btree_init = (
@@ -63,7 +78,7 @@ class Node(object):
 
     # right node instance on this instance (reference)
     _node_on_right = None
-    
+
     @is_satisfied_strongly(strong_node_init)
     def __init__(
             self, 
@@ -84,13 +99,34 @@ class Node(object):
         self._node_on_right = node_on_right
 
     def __str__(self):
-        return f'{self.__class__.__name__}<{self.key},{self.value}>'
-    
+        cls_ = self.__class__.__name__
+        key = self._key
+        val = self._value
+
+        left = None if self._node_on_left is None \
+            else self._node_on_left._key 
+
+        right = None if self._node_on_right is None \
+            else self._node_on_right._key
+
+        return f'{cls_}<{key}:{val}, l:{left}, r:{right}>'
+
+
     def __repr__(self):
-        return f'{self.__class__.__name__}<{self.key},{self.value}>'
+        cls_ = self.__class__.__name__
+        key = self._key
+        val = self._value
+
+        left = None if self._node_on_left is None \
+            else self._node_on_left._key 
+        
+        right = None if self._node_on_right is None \
+            else self._node_on_right._key
+
+        return f'{cls_}<{key}:{val}, l:{left}, r:{right}>'
 
     @property
-    def key(self) -> int: #why str?
+    def key(self) -> int:
         return self._key
 
     @property
@@ -103,7 +139,31 @@ class Node(object):
 
     @property
     def node_on_right(self) -> NodeType:
-        return self._node_on_left
+        return self._node_on_right
+
+class KeyGenerator(int):
+    # BinaryTree key generator
+
+    _treekey = None
+
+    _key = None
+
+    def __init__(self,treekey:int):
+        self._treekey = treekey
+        self._key = 0
+
+    @property
+    def treekey(self) -> int:
+        return self._treekey
+
+    @property
+    def key(self) -> int:
+        return self._key
+
+    def autokey(self) -> int:
+        self._key += 1
+        return self._key
+
 
 class BinaryTree(object):
     '''node class'''
@@ -114,6 +174,9 @@ class BinaryTree(object):
     # root node instance
     _root = None
 
+    # KeyGenerator instance
+    _keygenerator = None
+
     @is_satisfied_strongly(strong_btree_init)
     def __init__(self, key:int):
         # key should be given by 
@@ -121,6 +184,7 @@ class BinaryTree(object):
         # not by itself.
 
         self._key = key
+        self._keygenerator = KeyGenerator(key)
 
     @property
     def key(self) -> int:
@@ -128,70 +192,98 @@ class BinaryTree(object):
 
     @property
     def nodes(self) -> NodeType:
-        # yield or enumerate nodes that are contained itself.
-
-        # [[1,key],[2,key,key],[4,key,key,key,key],...]
+        def treesearch(node:Node):
+            if(node is not None):
+                yield from treesearch(node.node_on_left)
+                yield node
+                yield from treesearch(node.node_on_right)
         
-        yield None
+        return treesearch(self._root)
 
-    def _insert_as_value(self, root:NodeType, key:int,  value:object) -> NodeType:
+    def _insert_as_value(self, parent:Node, key:int, value:object) -> Node:
         # do not describe anything directly.
         # your code goes here, not a public method.
 
         # generate node -> insert
-        node = Node(key,value) 
+        node = Node(key)
+        node._value = value
 
-        if root is None:
+        if parent is None:
             #inserting first node
-            root = node
-        else:
-            if root._key == node._key:
-            #raise Exception
-                pass
-            elif root._key > node._key:
-                root._node_on_left = self. _insert_as_node(root._node_on_left, node)
-            else:
-                root._node_on_right = self. _insert_as_node(root._node_on_right, node)
+            parent = node
 
-        return root
+        else:
+            if parent._key == node._key:
+                pass
+
+            elif parent._key > node._key:
+                parent._node_on_left = self._insert_as_value(parent._node_on_left, key, value)
+                
+            else:
+                parent._node_on_right = self._insert_as_value(parent._node_on_right, key, value)
+
+        return parent
     
-    def _insert_as_node(self, root:NodeType, node:NodeType) -> NodeType:
+    def _insert_as_node(self, parent:Node, node:NodeType) -> Node:
         # do not describe anything directly.
         # your code goes here, not a public method.
 
-        if root is None:
+        if parent is None:
             #inserting first node
-            root = node
+            parent = node
         else:
-            if root._key == node._key:
+            if parent._key == node._key:
                 #raise Exception
                 pass
-            elif root._key > node._key:
-                root._node_on_left = self. _insert_as_node(root._node_on_left, node)
+            elif parent._key > node._key:
+                parent._node_on_left = self. _insert_as_node(parent._node_on_left, node)
             else:
-                root._node_on_right = self. _insert_as_node(root._node_on_right, node)
+                parent._node_on_right = self. _insert_as_node(parent._node_on_right, node)
 
-        return root
+        return parent
 
-
-    def _remove(self, key:int) -> bool:
+    def _remove(self, node:NodeType, key:int) -> tuple: #return Nodetype, bool
         # do not describe anything directly.
         # your code goes here, not a public method.
         
-        pass
+        if node is None:
+            return node, False
 
-    def _find(self, root:NodeType, key:int) -> NodeType:
-        # do not describe anything directly.
-        # your code goes here, not a public method.
-        
-        if root is None or root._key == key:
-            return root is not None
-        elif key < root._key:
-            return self._find(root._node_on_left, key)
+        result = False
+        if key == node._key:
+            result = True
+            if node._node_on_left and node._node_on_right:
+                top, bottom = node, node._node_on_right
+                while bottom._node_on_left is not None:
+                    top, bottom = bottom, bottom._node_on_left
+                bottom._node_on_left = node._node_on_left
+                if top != node:
+                    top._node_on_left = bottom._node_on_right
+                    bottom._node_on_right = node._node_on_right
+                node = bottom
+            elif node._node_on_left or node._node_on_right:
+                node = node._node_on_left or node._node_on_right
+            else:
+                node = None
+
+        elif key < node._key:
+            node._node_on_left, result = self._remove(node._node_on_left, key)
         else:
-            return self._find(root._node_on_right, key)
+            node._node_on_right, result = self._remove(node._node_on_right, key)
+        return node, result
 
-    def insert(self, data, key:int=0) -> bool:
+    def _find(self, parent:NodeType, key:int) -> Node:
+        # do not describe anything directly.
+        # your code goes here, not a public method.
+        
+        if parent is None or parent._key == key:
+            return parent
+        elif key < parent._key:
+            return self._find(parent._node_on_left, key)
+        else:
+            return self._find(parent._node_on_right, key)
+
+    def insert(self, data) -> bool:
         # your code goes here in a public method.
 
         # if value is not None and node is not None:
@@ -201,16 +293,19 @@ class BinaryTree(object):
         if isinstance(data, Node):
             self._root = self._insert_as_node(self._root,data)
             return True
+
         else:
-            self._root = self._insert_as_value(self._root,key,data)
+            key = self._keygenerator.autokey()
+            self._root = self._insert_as_value(self._root, key, value)
             return True
 
     def remove(self, key:int) -> bool:
         # your code goes here in a public method.
+        self._root, result = self._remove(self._root,key)
 
-        pass
+        return result
 
-    def find(self, key:int) -> NodeType:
+    def find(self, key:int) -> Node:
         # your code goes here in a public method.
         
         return self._find(self._root,key)
@@ -218,40 +313,74 @@ class BinaryTree(object):
     @staticmethod
     def dumps(cls, object_:BinaryTreeType) -> str:
         # this method should be treated as static method.
+        nodesdic = {}
+        nodesdic.update({'key':object_.key})
 
-        pass
+        for node in object_.nodes:
+            nodesdic.update({node.key:node.value})
+
+        return json.dumps(nodesdic)
 
     @staticmethod
     def loads(cls, str_:str) -> BinaryTreeType:
         # this method should be treated as static method.
 
-        pass
+        nodes = json.loads(str_)
+
+        tree = BinaryTree(nodes['key'])
+
+        del nodes['key']
+
+        for nodetuple in nodes.items():
+            node = Node(int(nodetuple[0]))
+            node._value = nodetuple[1]
+            tree.insert(node)
+        
+        return tree
 
     @staticmethod
-    def dump(cls, object_:BinaryTreeType, fp:IO[str]) -> str:
+    def dump(cls, object_:BinaryTreeType, fp) -> str:
         # this method should be treated as static method
         # and also described with static method "dumps"
-
-        pass
+        
+        fp.write(object_.dumps(cls,object_))
 
     @staticmethod
     def load(cls, fp:IO[str]) -> BinaryTreeType:
         # this method should be treated as static method
         # and also described with static method "loads"
 
-        pass
-
+        return BinaryTree.loads(BinaryTree,fp.read())
 
 if __name__ == "__main__":
-    nodes = [Node(1),Node(2)]
+    # nodes = [Node(1),Node(2),Node(3),Node(4),Node(5),Node(6),Node(7),Node(8)]
+    # nodes[0]._value = "1st"
+    values = ['this','is','value','insert','test']
     tree = BinaryTree(1)
 
-    for node in nodes:
-        print(tree.insert(node))
+    for value in values:
+        tree.insert(value)
     
-    print(nodes[0])
-    print(nodes[1])
-    print(tree.find(1))
-    print(tree.find(2))
-    print(tree.find(3))
+    treestr = BinaryTree.dumps(BinaryTree,tree)
     
+    treeadd = 'data/BinaryTree_{0}.json'.format(tree._key)
+
+    with open(treeadd, "w") as fp:
+
+        BinaryTree.dump(BinaryTree,tree,fp)
+
+    with open(treeadd, "r") as fp:
+        tree2 = BinaryTree.load(BinaryTree,fp)
+
+    for i in tree2.nodes:
+        print(i)
+
+    tree3 = BinaryTree.loads(BinaryTree,treestr)
+
+    for i in tree3.nodes:
+        print(i)
+
+
+    
+        
+
