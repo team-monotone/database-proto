@@ -1,5 +1,14 @@
 
 '''
+21.3.5  add : KeyGenerator
+        mod : insert, insert_as_value
+
+        update need:key라는 워딩을 id등 바꿔주자
+                    dump 할때 fp로 인자 받기
+                    
+'''
+
+'''
 [module structure hierarchy]
 
 unidentified class which will be discussed in future
@@ -24,13 +33,13 @@ from typing import IO
 
 # variables for strong-type.
 
-from strong_type import Itself
+from strong_type import SelfObject
 from strong_type import is_satisfied_strongly
 
 strong_node_init = (
     (1, 'key', [int]), 
-    (3, 'node_on_left', [None, Itself]), 
-    (4, 'node_on_right', [None, Itself]),
+    (3, 'node_on_left', [None, SelfObject]), 
+    (4, 'node_on_right', [None, SelfObject]),
     )
 
 strong_btree_init = (
@@ -106,6 +115,30 @@ class Node(object):
     def node_on_right(self) -> NodeType:
         return self._node_on_left
 
+class KeyGenerator(int):
+    # BinaryTree key generator
+
+    _treekey = None
+
+    _key = None
+
+    def __init__(self,treekey:int):
+        self._treekey = treekey
+        self._key = 0
+
+    @property
+    def treekey(self) -> int:
+        return self._treekey
+
+    @property
+    def key(self) -> int:
+        return self._key
+
+    def autokey(self) -> int:
+        self._key += 1
+        return self._key
+
+
 class BinaryTree(object):
     '''node class'''
     
@@ -118,6 +151,9 @@ class BinaryTree(object):
     # nodes instance
     _nodes = {}
 
+    # KeyGenerator instance
+    _keygenerator = None
+
     @is_satisfied_strongly(strong_btree_init)
     def __init__(self, key:int):
         # key should be given by 
@@ -126,6 +162,7 @@ class BinaryTree(object):
 
         self._key = key
         self._nodes.update({'key':key})
+        self._keygenerator = KeyGenerator(key)
 
     @property
     def key(self) -> int:
@@ -143,7 +180,8 @@ class BinaryTree(object):
         self._nodes.update({key:value})
 
         # generate node -> insert
-        node = Node(key,value) 
+        node = Node(key)
+        node._value = value 
 
         if root is None:
             #inserting first node
@@ -227,7 +265,7 @@ class BinaryTree(object):
         else:
             return self._find(root._node_on_right, key)
 
-    def insert(self, data, key:int=0) -> bool:
+    def insert(self, data) -> bool:
         # your code goes here in a public method.
 
         # if value is not None and node is not None:
@@ -238,6 +276,7 @@ class BinaryTree(object):
             self._root = self._insert_as_node(self._root,data)
             return True
         else:
+            key = self._keygenerator.autokey()
             self._root = self._insert_as_value(self._root,key,data)
             return True
 
@@ -294,10 +333,14 @@ class BinaryTree(object):
         return BinaryTree.loads(BinaryTree,fp.read())
 
 if __name__ == "__main__":
-    nodes = [Node(1),Node(2),Node(3),Node(4),Node(5),Node(6),Node(7),Node(8)]
-    nodes[0]._value = "1st"
-    tree = BinaryTree(1)
+    # nodes = [Node(1),Node(2),Node(3),Node(4),Node(5),Node(6),Node(7),Node(8)]
+    # nodes[0]._value = "1st"
+    #nodes = ['this','is','value','insert','test']
+    #tree = BinaryTree(1)
 
+    node111 = Node(1,'1')
+    print(node111)
+    '''
     print("insert ======")
     for node in nodes:
         print(tree.insert(node))
@@ -323,6 +366,8 @@ if __name__ == "__main__":
     print(tree.nodes)
     print(tree.remove(3))
     print(tree.nodes)
+    # 
+    json.dump()
     
     dumpstest = BinaryTree.dumps(BinaryTree,tree)
     print(dumpstest)
@@ -340,3 +385,4 @@ if __name__ == "__main__":
 
     print(tree3.nodes)
 
+    '''

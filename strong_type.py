@@ -5,7 +5,7 @@ class ArgumentException(Exception):
         message = f'argument "{pattern[0]}/{pattern[1]}" does not satisfied within "{pattern[2]}".'
         super().__init__(message)
 
-class Itself(object):
+class SelfObject(object):
 
     def __init__(self):
         pass
@@ -13,18 +13,22 @@ class Itself(object):
 def _is_satisfied_strongly(pttn, args, kwargs):
     index, keyword, types = pttn
     
-    if index > len(args) and keyword not in kwargs.keys():
+    if index >= len(args) and keyword not in kwargs.keys():
         return True
     
     else:
-        condition = [
-            isinstance(args[index], args[0].__class__) \
-                if type_ is Itself \
-                else isinstance(args[index], type_)
-            for type_ in types
-            ]
+        conditions = []
 
-    return any(condition)
+        for type_ in types:
+            if type_ is SelfObject:
+                condition = isinstance(args[index], args[0].__class__)
+            
+            else:
+                condition = isinstance(args[index], type_)
+
+            conditions.append(condition)
+
+    return any(conditions)
       
 def is_satisfied_strongly(pttns):
     def decorator(method):
