@@ -29,7 +29,7 @@ class AbstractTable(metaclass=ABCMeta):
         return BinaryTreeType
 
     @abstractmethod
-    def load_index_trees(self, table_id:int) -> list: # list or something appropriate data structure
+    def load_index_trees(self, tree_ids:list) -> list: # list or something appropriate data structure
         # do something
         return list()
 
@@ -72,9 +72,16 @@ class AbstractTable(metaclass=ABCMeta):
 
         # dump updated tree
         pass
-    
 
-    "================WHOLE TREE======================"
+    @abstractmethod
+    def get_data_by_condition(self, tree_id, column_name ,condition):
+        pass
+    
+    @abstractmethod
+    def get_whole_data(self, tree_id):
+        pass
+    
+    "================WHOLE TREE(FOR INTEGRITY)======================"
     @abstractmethod
     def add_data_on_whole_tree(self, data) -> None:
         for _, tree_id in self._index_trees:
